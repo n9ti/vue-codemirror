@@ -16,8 +16,31 @@
     props: {
       code: String,
       value: String,
+      markerLine: {
+        type: Array,
+        default: function () {
+          return []
+        }
+      },
       unseenLines: Array,
-      marker: Function,
+      marker: {
+        type: Function,
+        default: function () {
+          var marker = document.createElement('div')
+          marker.style.color = '#822'
+          marker.innerHTML = '●'
+          return marker
+        }
+      },
+      markerUnseenLines: {
+        type: Function,
+        default: function () {
+          var marker = document.createElement('div')
+          marker.style.color = '#FFF'
+          marker.innerHTML = '●'
+          return marker
+        }
+      },
       options: {
         type: Object,
         default: function() {
@@ -78,27 +101,36 @@
       var _this = this
       this.editor = CodeMirror.fromTextArea(this.$el, this.options)
       this.editor.setValue(this.code || this.value || this.content)
-      this.editor.on('change', function(cm) {
+      this.editor.on('change', function(cm, changeObj) {
         _this.content = cm.getValue()
         if (!!_this.$emit) {
           _this.$emit('changed', _this.content)
           _this.$emit('input', _this.content)
         }
       })
-      this.gutterMarkers()
+      this.editor.on("gutterClick", function(cm, n) {
+        _this.gutterMarkersByClicked(n)
+      })
+      if(this.unseenLines){
+          this.gutterMarkers()
+        }
     },
     watch: {
       'code': function(newVal, oldVal) {
         const editor_value = this.editor.getValue()
+        console.log(editor_value)
         if (newVal !== editor_value) {
           let scrollInfo = this.editor.getScrollInfo()
           this.editor.setValue(newVal)
           this.content = newVal
           this.editor.scrollTo(scrollInfo.left, scrollInfo.top)
         }
-        this.gutterMarkers()
+        if(this.unseenLines){
+          this.gutterMarkers()
+        }
       },
       'value': function(newVal, oldVal) {
+        this.unseenLines = []
         const editor_value = this.editor.getValue()
         if (newVal !== editor_value) {
           let scrollInfo = this.editor.getScrollInfo()
@@ -106,15 +138,24 @@
           this.content = newVal
           this.editor.scrollTo(scrollInfo.left, scrollInfo.top)
         }
+         if(this.unseenLines){
+          this.gutterMarkers()
+        }
       }
+
     },
     methods: {
       gutterMarkers: function () {
         var _this = this
+        console.log(this.unseenLines)
         _this.unseenLines.forEach(line => {
           var info = _this.editor.lineInfo(line)
-          _this.editor.setGutterMarker(line, "breakpoints", info.gutterMarkers ? null : _this.marker())
+          _this.editor.setGutterMarker(line, "breakpoints", info.gutterMarkers ? null : _this.markerUnseenLines())
         })
+      },
+      gutterMarkersByClicked: function (line) {
+        var info = this.editor.lineInfo(line)
+        this.editor.setGutterMarker(line, "breakpoints",  info.gutterMarkers ? null : this.marker())
       }
     }
   }
